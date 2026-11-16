@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="筋トレ記録">
+<meta name="theme-color" content="#16a34a">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2316a34a'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white'%3E💪%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2316a34a'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white'%3E💪%3C/text%3E%3C/svg%3E">
+<title>筋トレ記録</title>
+<style>
+:root{--bg:#f4f6f5;--card:#fff;--fg:#14201a;--sub:#66756c;--pri:#16a34a;--pri-fg:#fff;--line:#dde4e0;--acc:#f59e0b;--h0:#e6ebe8;--h1:#a7e3bd;--h2:#4ec27a;--h3:#16a34a;--danger:#dc2626}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1411;--card:#18211c;--fg:#eaf1ed;--sub:#93a39a;--pri:#22c55e;--pri-fg:#04210f;--line:#2a372f;--acc:#fbbf24;--h0:#222d27;--h1:#1d5a35;--h2:#25904f;--h3:#22c55e;--danger:#f87171}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;padding:calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))}
+main{max-width:560px;margin:0 auto}
+h1{font-size:20px;margin:4px 0 10px}
+h2{font-size:15px;margin:0 0 8px;color:var(--sub);font-weight:600}
+.card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px;border:1px solid var(--line)}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+button,input{font:inherit;color:inherit}
+.opt{flex:1 1 28%;min-height:48px;border-radius:12px;border:2px solid var(--line);background:var(--bg);font-weight:600;cursor:pointer;padding:6px}
+.opt.on{background:var(--pri);color:var(--pri-fg);border-color:var(--pri)}
+.feel{flex:1 1 17%;min-width:0}
+input[type=text],input[type=number],input[type=date]{width:100%;min-height:46px;border-radius:12px;border:2px solid var(--line);background:var(--bg);padding:6px 10px;margin-top:8px}
+.big{width:100%;min-height:56px;border:0;border-radius:14px;background:var(--pri);color:var(--pri-fg);font-size:18px;font-weight:700;margin-top:12px;cursor:pointer}
+.ghost{background:none;border:1px solid var(--line);border-radius:10px;min-height:36px;padding:0 12px;cursor:pointer}
+.ghost.del{color:var(--danger)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stats b{display:block;font-size:24px}.stats span{font-size:12px;color:var(--sub)}
+.bar{height:10px;border-radius:5px;background:var(--h0);overflow:hidden;margin:6px 0}
+.bar i{display:block;height:100%;background:var(--pri);transition:width .4s}
+.small{font-size:13px;color:var(--sub)}
+.praise{display:none;background:var(--acc);color:#2b1d00;font-weight:700;text-align:center}
+.praise.show{display:block;animation:pop .4s}
+@keyframes pop{from{transform:scale(.9);opacity:0}to{transform:none;opacity:1}}
+.badges{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.badge{padding:8px;border-radius:12px;border:1px solid var(--line);font-size:13px;opacity:.45}
+.badge.got{opacity:1;border-color:var(--acc)}
+.badge em{font-style:normal;font-size:22px;display:block}
+.heat{display:grid;grid-template-columns:repeat(7,1fr) 44px;gap:4px;align-items:center;text-align:center;font-size:11px;color:var(--sub)}
+.cell{aspect-ratio:1;border-radius:6px;background:var(--h0);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--fg)}
+.cell.l1{background:var(--h1)}.cell.l2{background:var(--h2)}.cell.l3{background:var(--h3);color:var(--pri-fg)}
+.cell.rest{outline:2px dashed var(--acc)}.cell.today{outline:2px solid var(--fg)}.cell.none{background:none}
+.item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.item:first-of-type{border-top:0}
+.pc{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9}
+.pc i{position:absolute;top:-20px;width:10px;height:14px;animation:fall 2.4s ease-in forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+.toast{font-size:13px;color:var(--sub);text-align:center;min-height:20px}
+</style>
+</head>
+<body>
+<main>
+<h1>💪 筋トレ記録</h1>
+
+<div class="card praise" id="praise" role="status"></div>
+
+<div class="card">
+  <div class="stats">
+    <div><b id="lv">1</b><span>レベル</span></div>
+    <div><b id="streak">0</b><span>連続日数 🔥</span></div>
+    <div><b id="xp">0</b><span>XP</span></div>
+  </div>
+  <div class="bar"><i id="xpbar" style="width:0"></i></div>
+  <div class="small" id="xpnote"></div>
+  <div class="small" id="ticket"></div>
+  <div class="small" id="care"></div>
+</div>
+
+<div class="card">
+  <h2>今週のミッション（週3日・1回3分から）</h2>
+  <div class="bar"><i id="mbar" style="width:0"></i></div>
+  <div id="mtext"></div>
+</div>
+
+<div class="card" id="form">
+  <h2 id="formTitle">記録する</h2>
+  <div class="row" id="exBtns"></div>
+  <input type="text" id="exFree" placeholder="種目名を入力" maxlength="30" hidden>
+  <h2 style="margin-top:14px">時間（分）</h2>
+  <div class="row" id="minBtns"></div>
+  <input type="number" id="minFree" inputmode="numeric" min="1" max="600" placeholder="分を入力" hidden>
+  <h2 style="margin-top:14px">きつさ（1〜10）</h2>
+  <div class="row" id="feelBtns"></div>
+  <h2 style="margin-top:14px">日付</h2>
+  <input type="date" id="date">
+  <button class="big" id="save">記録する</button>
+  <button class="ghost" id="cancel" hidden style="margin-top:8px;width:100%">編集をやめる</button>
+</div>
+
+<div class="card"><h2>バッジ</h2><div class="badges" id="badges"></div></div>
+
+<div class="card"><h2>カレンダー（11月〜）</h2>
+  <div class="heat" id="heatHead"></div>
+  <div class="heat" id="heat"></div>
+  <div class="small" style="margin-top:6px">点線＝おやすみチケットで継続 / 右端＝週の実施日数</div>
+</div>
+
+<div class="card"><h2>記録一覧</h2><div id="list"></div></div>
+
+<div class="card"><h2>バックアップ</h2>
+  <div class="row">
+    <button class="opt" id="exp">書き出し(JSON)</button>
+    <button class="opt" id="imp">読み込み</button>
+  </div>
+  <input type="file" id="file" accept="application/json,.json" hidden>
+  <div class="toast" id="toast"></div>
+  <div class="small">データはこの端末のブラウザ内だけに保存されます。</div>
+</div>
+</main>
+<div class="pc" id="pc"></div>
+
+<script>
+var SEED_CSV = "date,pushups,situps,hiplifts,sets,minutes,feeling,note\n";
+
+var KEY = "fitness-app-v1";
+var EXERCISES = ["腕立て","腹筋","お尻のピラティス","スクワット"];
+var MINS = [1,2,3,5,10];
+var START = "2026-11-01";
+var PRAISES = ["えらい！今日もやった自分を褒めよう 👏","1回でも立派な一歩！","続けてる自分、かっこいい 🔥","短くてもOK。やったことが大事！","体が喜んでるよ 💚","ナイス！積み重ねが力になる","今日もクリア！おつかれさま ✨","やった日が増えていくの、最高！"];
+
+// ---------- date helpers (local time) ----------
+function pad(n){return n<10?"0"+n:""+n}
+function fmt(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+function parse(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+function addDays(s,n){var d=parse(s);d.setDate(d.getDate()+n);return fmt(d)}
+function today(){return fmt(new Date())}
+function weekStart(s){var d=parse(s);var w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return fmt(d)}
+
+// ---------- data ----------
+function parseSeed(csv){
+  var lines=csv.trim().split("\n").slice(1),out=[];
+  lines.forEach(function(l,i){
+    var c=l.split(",");
+    var name=(c[7]||"").replace(/（.*?）/g,"").replace(/実施$/,"").trim();
+    out.push({id:"seed"+i,date:c[0],exercise:name,minutes:c[5]?+c[5]:null,feeling:c[6]?+c[6]:null,
+      note:"",extra:{pushups:c[1]||"",situps:c[2]||"",hiplifts:c[3]||"",sets:c[4]||""}});
+  });
+  return out;
+}
+function load(){
+  var raw=null;
+  try{raw=localStorage.getItem(KEY)}catch(e){}
+  if(raw){try{var d=JSON.parse(raw);if(d&&Array.isArray(d.records))return d}catch(e){}}
+  var d={records:parseSeed(SEED_CSV),seeded:true};
+  save(d);return d;
+}
+function save(d){try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+var state=(typeof localStorage!=="undefined")?load():{records:[]};
+
+// ---------- logic ----------
+function recXP(r,first){
+  return 10+(first?30:0)+Math.min(r.minutes||0,10);
+}
+function computeXP(records){
+  var seen={},xp=0,sorted=records.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0});
+  sorted.forEach(function(r){var f=!seen[r.date];seen[r.date]=1;xp+=recXP(r,f)});
+  return xp;
+}
+function levelInfo(xp){
+  var lv=1;while(xp>=lvStart(lv+1))lv++;
+  var a=lvStart(lv),b=lvStart(lv+1);
+  return {lv:lv,cur:xp-a,need:b-a};
+}
+function lvStart(l){return 50*(l-1)*l/2} // lv2=50, lv3=150...
+function daysSet(records){var s={};records.forEach(function(r){s[r.date]=(s[r.date]||0)+1});return s}
+// streak with weekly rest ticket (auto-used, 1 per Mon-Sun week)
+function computeStreak(records,todayStr){
+  var ds=daysSet(records),dates=Object.keys(ds).sort();
+  var res={current:0,best:0,restDays:{},ticketUsedThisWeek:false};
+  if(!dates.length)return res;
+  var used={},cur=0,best=0,d=dates[0];
+  while(d<todayStr){
+    if(ds[d]){cur++}
+    else{
+      var w=weekStart(d);
+      if(cur>0&&!used[w]){used[w]=1;res.restDays[d]=1}
+      else cur=0;
+    }
+    if(cur>best)best=cur;
+    d=addDays(d,1);
+  }
+  if(ds[todayStr])cur++;
+  if(cur>best)best=cur;
+  res.current=cur;res.best=best;
+  res.ticketUsedThisWeek=!!used[weekStart(todayStr)];
+  return res;
+}
+function weekDays(records,ws){
+  var ds=daysSet(records),n=0;
+  for(var i=0;i<7;i++)if(ds[addDays(ws,i)])n++;
+  return n;
+}
+function maxWeekDays(records){
+  var ws={};records.forEach(function(r){ws[weekStart(r.date)]=1});
+  var m=0;Object.keys(ws).forEach(function(w){m=Math.max(m,weekDays(records,w))});return m;
+}
+var BADGES=[
+ {id:"first",icon:"🌱",name:"初記録",t:"はじめの一歩",f:function(c){return c.records.length>=1}},
+ {id:"s3",icon:"🔥",name:"3日連続",t:"連続日数3",f:function(c){return c.st.best>=3}},
+ {id:"s7",icon:"🏅",name:"7日連続",t:"連続日数7",f:function(c){return c.st.best>=7}},
+ {id:"s14",icon:"🏆",name:"14日連続",t:"連続日数14",f:function(c){return c.st.best>=14}},
+ {id:"w3",icon:"📅",name:"週3日達成",t:"1週間に3日",f:function(c){return maxWeekDays(c.records)>=3}},
+ {id:"all",icon:"🎯",name:"全種目制覇",t:"4種目すべて",f:function(c){return EXERCISES.every(function(e){return c.records.some(function(r){return r.exercise===e})})}},
+ {id:"r10",icon:"🔟",name:"10回記録",t:"記録10件",f:function(c){return c.records.length>=10}},
+ {id:"d10",icon:"🗓️",name:"10日やった",t:"実施10日",f:function(c){return Object.keys(daysSet(c.records)).length>=10}},
+ {id:"short",icon:"⚡",name:"ちょい運動",t:"1〜3分で記録",f:function(c){return c.records.some(function(r){return r.minutes&&r.minutes<=3})}},
+ {id:"rest",icon:"🛌",name:"休養上手",t:"おやすみチケット使用",f:function(c){return Object.keys(c.st.restDays).length>=1}},
+ {id:"lv5",icon:"⭐",name:"Lv5到達",t:"レベル5",f:function(c){return c.lv.lv>=5}}
+];
+function ctx(){
+  var st=computeStreak(state.records,today());
+  return {records:state.records,st:st,lv:levelInfo(computeXP(state.records))};
+}
+function earnedIds(){var c=ctx();return BADGES.filter(function(b){return b.f(c)}).map(function(b){return b.id})}
+
+// ---------- UI state ----------
+var sel={ex:null,min:null,minFree:false,feel:null,editId:null};
+function $(id){return document.getElementById(id)}
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+
+function buildForm(){
+  var exB=$("exBtns");exB.textContent="";
+  EXERCISES.concat(["その他"]).forEach(function(n){
+    var b=el("button","opt",n);b.type="button";b.dataset.v=n;
+    b.onclick=function(){sel.ex=n;if(n!=="その他")$("exFree").value="";renderForm()};
+    exB.appendChild(b);
+  });
+  var mB=$("minBtns");mB.textContent="";
+  MINS.forEach(function(m){
+    var b=el("button","opt",m+"分");b.type="button";
+    b.onclick=function(){sel.min=sel.min===m&&!sel.minFree?null:m;sel.minFree=false;renderForm()};
+    b.dataset.v=m;mB.appendChild(b);
+  });
+  var o=el("button","opt","その他");o.type="button";o.dataset.v="free";
+  o.onclick=function(){sel.minFree=true;sel.min=null;renderForm();$("minFree").focus()};
+  mB.appendChild(o);
+  var fB=$("feelBtns");fB.textContent="";
+  for(var i=1;i<=10;i++){(function(i){
+    var b=el("button","opt feel",""+i);b.type="button";b.dataset.v=i;
+    b.onclick=function(){sel.feel=sel.feel===i?null:i;renderForm()};
+    fB.appendChild(b);
+  })(i)}
+}
+function renderForm(){
+  [].forEach.call($("exBtns").children,function(b){b.classList.toggle("on",sel.ex===b.dataset.v)});
+  $("exFree").hidden=sel.ex!=="その他";
+  [].forEach.call($("minBtns").children,function(b){
+    b.classList.toggle("on",b.dataset.v==="free"?sel.minFree:(!sel.minFree&&sel.min===+b.dataset.v));
+  });
+  $("minFree").hidden=!sel.minFree;
+  [].forEach.call($("feelBtns").children,function(b){b.classList.toggle("on",sel.feel===+b.dataset.v)});
+  $("formTitle").textContent=sel.editId?"記録を編集":"記録する";
+  $("save").textContent=sel.editId?"更新する":"記録する";
+  $("cancel").hidden=!sel.editId;
+}
+function resetForm(){
+  sel={ex:null,min:null,minFree:false,feel:null,editId:null};
+  $("exFree").value="";$("minFree").value="";$("date").value=today();renderForm();
+}
+function onSave(){
+  var ex=sel.ex==="その他"?$("exFree").value.trim():sel.ex;
+  if(!ex){toast("種目を選んでね");return}
+  var min=sel.minFree?parseInt($("minFree").value,10):sel.min;
+  if(!(min>0))min=null;
+  var date=$("date").value||today();
+  var before=earnedIds(),wasMission=weekDays(state.records,weekStart(today()))>=3;
+  if(sel.editId){
+    var r=state.records.filter(function(x){return x.id===sel.editId})[0];
+    if(r){r.exercise=ex;r.minutes=min;r.feeling=sel.feel;r.date=date}
+    save(state);resetForm();render();toast("更新しました");return;
+  }
+  state.records.push({id:"r"+Date.now()+Math.floor(Math.random()*1000),date:date,exercise:ex,minutes:min,feeling:sel.feel,note:""});
+  save(state);resetForm();render();
+  var msg=PRAISES[Math.floor(Math.random()*PRAISES.length)];
+  var after=earnedIds(),nb=after.filter(function(i){return before.indexOf(i)<0});
+  if(nb.length){msg+="\n🎉 バッジ獲得："+nb.map(function(i){return BADGES.filter(function(b){return b.id===i})[0].name}).join("、")}
+  var nowMission=weekDays(state.records,weekStart(today()))>=3;
+  if(nowMission&&!wasMission){msg+="\n🏁 今週のミッション達成！";confetti()}
+  else if(nb.length)confetti();
+  praise(msg);
+}
+function praise(msg){var p=$("praise");p.textContent=msg;p.style.whiteSpace="pre-line";p.classList.remove("show");void p.offsetWidth;p.classList.add("show");p.scrollIntoView({behavior:"smooth",block:"nearest"})}
+function toast(t){$("toast").textContent=t;setTimeout(function(){$("toast").textContent=""},3000)}
+function confetti(){
+  var pc=$("pc"),cols=["#f59e0b","#22c55e","#3b82f6","#ef4444","#a855f7"];
+  for(var i=0;i<60;i++){
+    var s=document.createElement("i");
+    s.style.left=Math.random()*100+"%";s.style.background=cols[i%5];
+    s.style.animationDelay=Math.random()*0.6+"s";
+    pc.appendChild(s);
+  }
+  setTimeout(function(){pc.textContent=""},3500);
+}
+
+// ---------- render ----------
+function render(){
+  var c=ctx(),xp=computeXP(state.records);
+  $("lv").textContent=c.lv.lv;$("xp").textContent=xp;$("streak").textContent=c.st.current;
+  $("xpbar").style.width=Math.round(c.lv.cur/c.lv.need*100)+"%";
+  $("xpnote").textContent="次のレベルまであと "+(c.lv.need-c.lv.cur)+" XP（記録すれば必ずXP。その日の最初の記録はボーナス）";
+  $("ticket").textContent=c.st.ticketUsedThisWeek?"🎫 おやすみチケット：今週は使用済み（休むのもOK）":"🎫 おやすみチケット：今週あり（1日休んでも連続が切れません）";
+  // gentle note on high effort
+  var recent=state.records.filter(function(r){return r.feeling}).sort(function(a,b){return a.date<b.date?-1:1}).slice(-3);
+  $("care").textContent=(recent.length===3&&recent.every(function(r){return r.feeling>=8}))?"きつさが高い日が続いています。軽めの日もOKです 🍃":"";
+  var wd=weekDays(state.records,weekStart(today()));
+  $("mbar").style.width=Math.min(100,wd/3*100)+"%";
+  $("mtext").textContent=wd>=3?"🎉 達成！ 今週 "+wd+"日 やりました":"今週 "+wd+" / 3 日（あと"+(3-wd)+"日）";
+  // badges
+  var bd=$("badges");bd.textContent="";
+  BADGES.forEach(function(b){
+    var got=b.f(c),d=el("div","badge"+(got?" got":""));
+    d.appendChild(el("em",null,got?b.icon:"🔒"));d.appendChild(el("b",null,b.name));d.appendChild(el("div","small",b.t));
+    bd.appendChild(d);
+  });
+  renderHeat(c);renderList();
+}
+function renderHeat(c){
+  var hh=$("heatHead");hh.textContent="";
+  ["月","火","水","木","金","土","日","週"].forEach(function(t){hh.appendChild(el("div",null,t))});
+  var h=$("heat");h.textContent="";
+  var ds=daysSet(state.records),t=today(),ws=weekStart(START),last=weekStart(t);
+  while(ws<=last){
+    for(var i=0;i<7;i++){
+      var d=addDays(ws,i),n=ds[d]||0,cell=el("div","cell");
+      if(d<START||d>t){cell.classList.add("none")}
+      else{
+        cell.textContent=parse(d).getDate();
+        if(n)cell.classList.add(n>=3?"l3":n===2?"l2":"l1");
+        if(c.st.restDays[d])cell.classList.add("rest");
+        if(d===t)cell.classList.add("today");
+      }
+      h.appendChild(cell);
+    }
+    h.appendChild(el("div",null,weekDays(state.records,ws)+"日"));
+    ws=addDays(ws,7);
+  }
+}
+var JP=["日","月","火","水","木","金","土"];
+function renderList(){
+  var l=$("list");l.textContent="";
+  var rs=state.records.slice().sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:(a.id<b.id?1:-1)});
+  if(!rs.length){l.appendChild(el("div","small","まだ記録がありません"));return}
+  rs.forEach(function(r){
+    var it=el("div","item"),left=el("div");
+    var dt=parse(r.date);
+    left.appendChild(el("b",null,(dt.getMonth()+1)+"/"+dt.getDate()+"("+JP[dt.getDay()]+") "+r.exercise));
+    left.appendChild(el("div","small",(r.minutes?r.minutes+"分":"時間 不明")+" ・ きつさ "+(r.feeling||"不明")));
+    var btns=el("div","row");
+    var e=el("button","ghost","編集"),x=el("button","ghost del","削除");
+    e.onclick=function(){
+      sel.editId=r.id;sel.ex=EXERCISES.indexOf(r.exercise)>=0?r.exercise:"その他";
+      $("exFree").value=EXERCISES.indexOf(r.exercise)>=0?"":r.exercise;
+      sel.feel=r.feeling;sel.minFree=false;sel.min=null;$("minFree").value="";
+      if(r.minutes){if(MINS.indexOf(r.minutes)>=0)sel.min=r.minutes;else{sel.minFree=true;$("minFree").value=r.minutes}}
+      $("date").value=r.date;renderForm();$("form").scrollIntoView({behavior:"smooth"});
+    };
+    x.onclick=function(){
+      if(confirm("この記録を削除しますか？")){
+        state.records=state.records.filter(function(q){return q.id!==r.id});
+        save(state);if(sel.editId===r.id)resetForm();render();
+      }
+    };
+    btns.appendChild(e);btns.appendChild(x);it.appendChild(left);it.appendChild(btns);l.appendChild(it);
+  });
+}
+
+// ---------- backup ----------
+function exportJSON(){
+  var blob=new Blob([JSON.stringify({app:"fitness-app",version:1,exportedAt:new Date().toISOString(),records:state.records},null,2)],{type:"application/json"});
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="fitness-backup-"+today()+".json";
+  document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},1000);
+}
+function validRec(r){
+  return r&&typeof r.date==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)&&typeof r.exercise==="string"&&r.exercise;
+}
+function importJSON(text){
+  var d;try{d=JSON.parse(text)}catch(e){toast("読み込めませんでした（JSONではありません）");return}
+  var rs=d&&d.records;
+  if(!Array.isArray(rs)||!rs.every(validRec)){toast("形式が違うため読み込みませんでした");return}
+  if(!confirm(rs.length+"件で現在の記録を置き換えます。よろしいですか？"))return;
+  state.records=rs.map(function(r,i){
+    return {id:String(r.id||"i"+Date.now()+i),date:r.date,exercise:String(r.exercise).slice(0,30),
+      minutes:r.minutes>0?+r.minutes:null,feeling:r.feeling>=1&&r.feeling<=10?+r.feeling:null,note:String(r.note||"")};
+  });
+  save(state);resetForm();render();toast(rs.length+"件を読み込みました");
+}
+
+// ---------- init ----------
+if(typeof document!=="undefined"&&document.getElementById("save")){
+  buildForm();resetForm();
+  $("save").onclick=onSave;
+  $("cancel").onclick=resetForm;
+  $("exp").onclick=exportJSON;
+  $("imp").onclick=function(){$("file").click()};
+  $("file").onchange=function(){
+    var f=this.files[0];if(!f)return;
+    var fr=new FileReader();fr.onload=function(){importJSON(fr.result)};fr.readAsText(f);this.value="";
+  };
+  render();
+}
+</script>
+</body>
+</html>
