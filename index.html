@@ -52,6 +52,37 @@ input[type=text],input[type=number],input[type=date]{width:100%;min-height:46px;
 .pc i{position:absolute;top:-20px;width:10px;height:14px;animation:fall 2.4s ease-in forwards}
 @keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
 .toast{font-size:13px;color:var(--sub);text-align:center;min-height:20px}
+.packs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.packs button{min-height:64px;border-radius:14px;border:2px solid var(--pri);background:var(--bg);font-weight:700;cursor:pointer;line-height:1.3}
+.packs button.rare{border-color:#a855f7}
+.packs button:disabled{opacity:.4;cursor:default;border-color:var(--line)}
+.cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ct{aspect-ratio:3/4;border-radius:10px;border:2px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;text-align:center;padding:2px;background:var(--bg);cursor:pointer;position:relative;overflow:hidden;font-weight:600}
+.ct em{font-style:normal;font-size:28px;line-height:1.2}
+.ct.lock{opacity:.4;cursor:default}
+.rar1{border-color:#3b82f6}.rar2{border-color:#a855f7}
+.ct.k{background:linear-gradient(135deg,#fde68a,#fbcfe8,#bfdbfe,#bbf7d0);color:#1a1a1a}
+.ct .cnt{position:absolute;bottom:1px;right:3px;font-size:10px;color:var(--sub)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
+.modal[hidden]{display:none}
+.mcard{width:min(260px,80vw);aspect-ratio:3/4.2;border-radius:18px;border:4px solid var(--line);background:linear-gradient(160deg,var(--card),var(--bg));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px;text-align:center;animation:flip .6s}
+.mcard.rar1{border-color:#3b82f6;box-shadow:0 0 24px #3b82f688}
+.mcard.rar2{border-color:#a855f7;box-shadow:0 0 32px #a855f7aa}
+.mcard.k{background:linear-gradient(135deg,#fde68a,#fbcfe8,#bfdbfe,#bbf7d0);color:#1a1a1a}
+.mcard .cemoji{font-size:80px;line-height:1.1}
+.mcard .rl{font-size:12px;font-weight:700;letter-spacing:.1em}
+.mcard .nw{background:var(--acc);color:#2b1d00;border-radius:8px;padding:0 8px;font-size:12px;font-weight:700}
+@keyframes flip{from{transform:rotateY(90deg) scale(.8);opacity:0}to{transform:none;opacity:1}}
+.mbtns{display:flex;gap:8px}
+.mbtns button{min-height:48px;border-radius:12px;border:0;padding:0 18px;font-weight:700;background:var(--pri);color:var(--pri-fg);cursor:pointer}
+.mbtns button.sub{background:var(--card);color:var(--fg)}
+.rw{padding:8px 0;border-top:1px solid var(--line)}
+.rw:first-of-type{border-top:0}
+.rw .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.rw.ok b::before{content:"🎁 "}
+.rw.done{opacity:.55}
+.rw .bar{height:6px}
+select{font:inherit;color:inherit;width:100%;min-height:46px;border-radius:12px;border:2px solid var(--line);background:var(--bg);padding:6px 10px;margin-top:8px}
 </style>
 </head>
 <body>
@@ -93,6 +124,27 @@ input[type=text],input[type=number],input[type=date]{width:100%;min-height:46px;
   <button class="ghost" id="cancel" hidden style="margin-top:8px;width:100%">編集をやめる</button>
 </div>
 
+<div class="card">
+  <h2>🎁 カードパック</h2>
+  <div class="packs">
+    <button id="openN" type="button"></button>
+    <button id="openR" type="button" class="rare"></button>
+  </div>
+  <div class="small" style="margin-top:6px">記録した日ごとに通常パック1枚。バッジ獲得・ミッション達成ごとにレアパック1枚。外れなし、必ず1枚もらえます。</div>
+</div>
+
+<div class="card"><h2 id="colTitle">カード図鑑</h2><div class="cgrid" id="cgrid"></div>
+  <div class="small" style="margin-top:6px">タップで詳細。ダブったカードは「キラ化」できます ✨</div>
+</div>
+
+<div class="card"><h2>ごほうび</h2>
+  <div id="rwList"></div>
+  <input type="text" id="rwName" placeholder="ごほうび（例：サウナに行く）" maxlength="30">
+  <select id="rwType"></select>
+  <input type="number" id="rwNum" inputmode="numeric" min="1" max="999" placeholder="数">
+  <button class="big" id="rwAdd" type="button" style="min-height:48px;font-size:16px">ごほうびを追加</button>
+</div>
+
 <div class="card"><h2>バッジ</h2><div class="badges" id="badges"></div></div>
 
 <div class="card"><h2>カレンダー（11月〜）</h2>
@@ -114,6 +166,7 @@ input[type=text],input[type=number],input[type=date]{width:100%;min-height:46px;
 </div>
 </main>
 <div class="pc" id="pc"></div>
+<div class="modal" id="modal" hidden><div class="mcard" id="mcard"></div><div class="mbtns" id="mbtns"></div></div>
 
 <script>
 var SEED_CSV = "date,pushups,situps,hiplifts,sets,minutes,feeling,note\n";
@@ -146,12 +199,20 @@ function parseSeed(csv){
 function load(){
   var raw=null;
   try{raw=localStorage.getItem(KEY)}catch(e){}
-  if(raw){try{var d=JSON.parse(raw);if(d&&Array.isArray(d.records))return d}catch(e){}}
-  var d={records:parseSeed(SEED_CSV),seeded:true};
+  if(raw){try{var d=JSON.parse(raw);if(d&&Array.isArray(d.records))return norm(d)}catch(e){}}
+  var d=norm({records:parseSeed(SEED_CSV),seeded:true});
   save(d);return d;
 }
 function save(d){try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
-var state=(typeof localStorage!=="undefined")?load():{records:[]};
+// 古い保存データ（cards / rewards なし）も、読み込み時にここで補う。records は触らない。
+function norm(d){
+  if(!d.cards||typeof d.cards!=="object")d.cards={};
+  if(!d.cards.owned||typeof d.cards.owned!=="object")d.cards.owned={};
+  d.cards.openedN=+d.cards.openedN||0;d.cards.openedR=+d.cards.openedR||0;
+  if(!Array.isArray(d.rewards))d.rewards=[];
+  return d;
+}
+var state=(typeof localStorage!=="undefined")?load():norm({records:[]});
 
 // ---------- logic ----------
 function recXP(r,first){
@@ -219,6 +280,140 @@ function ctx(){
 }
 function earnedIds(){var c=ctx();return BADGES.filter(function(b){return b.f(c)}).map(function(b){return b.id})}
 
+// ---------- cards ----------
+var RAR=["コモン","レア","超レア"];
+var CARDS=[
+ {id:"c01",r:0,e:"🐿️",n:"腕立てリス",t:"どんぐりより先に腕立てを拾う。"},
+ {id:"c02",r:0,e:"🐧",n:"腹筋ペンギン",t:"氷の上でも腹筋は崩れない。"},
+ {id:"c03",r:0,e:"🐱",n:"お尻ピラ猫",t:"伸びをしながらヒップリフト。"},
+ {id:"c04",r:0,e:"🐸",n:"スクワットガエル",t:"跳ぶ前に必ずしゃがむ。"},
+ {id:"c05",r:0,e:"🐢",n:"プランクガメ",t:"動かないのが得意技。"},
+ {id:"c06",r:0,e:"🐻",n:"ダンベルくま",t:"鮭より重いものを持ち上げたい。"},
+ {id:"c07",r:0,e:"🐙",n:"ストレッチたこ",t:"全身どこでも伸びる。"},
+ {id:"c08",r:0,e:"🦆",n:"ひよこ体操あひる",t:"3分だけ、がモットー。"},
+ {id:"c09",r:1,e:"🧚",n:"腕立ての妖精",t:"1回できたら羽が1枚ふえる。"},
+ {id:"c10",r:1,e:"🗿",n:"腹筋の番人",t:"6つに割れた伝説を守っている。"},
+ {id:"c11",r:1,e:"👑",n:"お尻ピラティスの女王",t:"背筋もヒップも、女王の風格。"},
+ {id:"c12",r:1,e:"🦁",n:"三分間ライオン",t:"3分で百獣の王になる。"},
+ {id:"c13",r:1,e:"🧙",n:"休養の仙人",t:"休むのも修行、と教えてくれる。"},
+ {id:"c14",r:2,e:"🐉",n:"筋肉ドラゴン",t:"炎のかわりにプロテインを吐く。"},
+ {id:"c15",r:2,e:"🔥",n:"不死鳥フェニックス",t:"休んでも、何度でも立ち上がる。"},
+ {id:"c16",r:2,e:"🌟",n:"継続の神さま",t:"続けたあなたの背中を押している。"}
+];
+function cardById(id){for(var i=0;i<CARDS.length;i++)if(CARDS[i].id===id)return CARDS[i];return null}
+function weeksDone(records){
+  var ws={};records.forEach(function(r){ws[weekStart(r.date)]=1});
+  return Object.keys(ws).filter(function(w){return weekDays(records,w)>=3}).length;
+}
+// 届いたパック数は記録から毎回計算し、開けた数だけを保存する（記録の形式は変えない）
+function packInfo(){
+  var c=ctx(),days=Object.keys(daysSet(state.records)).length;
+  var rare=BADGES.filter(function(b){return b.f(c)}).length+weeksDone(state.records);
+  return {n:Math.max(0,days-state.cards.openedN),r:Math.max(0,rare-state.cards.openedR)};
+}
+function pickCard(kind){
+  var x=Math.random(),rar;
+  if(kind==="r")rar=x<0.8?1:2;else rar=x<0.7?0:(x<0.95?1:2);
+  var pool=CARDS.filter(function(c){return c.r===rar});
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function openPack(kind){
+  var p=packInfo();if(!(p[kind]>0))return;
+  var card=pickCard(kind),o=state.cards.owned[card.id],isNew=!o;
+  if(!o)o=state.cards.owned[card.id]={n:0,k:false};
+  o.n++;
+  if(kind==="n")state.cards.openedN++;else state.cards.openedR++;
+  save(state);render();
+  if(card.r>=1)confetti();
+  showCard(card.id,isNew);
+}
+function showCard(id,isNew){
+  var card=cardById(id),o=state.cards.owned[id];if(!card||!o)return;
+  var m=$("mcard");m.className="mcard rar"+card.r+(o.k?" k":"");m.textContent="";
+  m.appendChild(el("div","rl",RAR[card.r]+(o.k?" ✨キラ":"")));
+  m.appendChild(el("div","cemoji",card.e));
+  m.appendChild(el("b",null,card.n));
+  m.appendChild(el("div","small",card.t));
+  if(isNew)m.appendChild(el("div","nw","NEW！"));
+  else if(o.n>1)m.appendChild(el("div","small","持っている枚数："+o.n));
+  var b=$("mbtns");b.textContent="";
+  if(o.n>=2&&!o.k){
+    var k=el("button",null,"✨ キラ化する（ダブり1枚を使う）");k.type="button";
+    k.onclick=function(){o.n--;o.k=true;save(state);render();showCard(id,false)};
+    b.appendChild(k);
+  }
+  var c=el("button","sub","閉じる");c.type="button";c.onclick=closeModal;b.appendChild(c);
+  $("modal").hidden=false;
+}
+function closeModal(){$("modal").hidden=true}
+
+// ---------- rewards ----------
+var RW_TYPES=[
+ {v:"days",label:"実施した日が",unit:"日"},
+ {v:"streak",label:"連続日数が",unit:"日"},
+ {v:"lv",label:"レベルが",unit:""},
+ {v:"weeks",label:"ミッション達成が",unit:"週"},
+ {v:"cards",label:"集めたカードが",unit:"種"}
+];
+function rwType(v){for(var i=0;i<RW_TYPES.length;i++)if(RW_TYPES[i].v===v)return RW_TYPES[i];return RW_TYPES[0]}
+function rwValue(type,c){
+  if(type==="days")return Object.keys(daysSet(state.records)).length;
+  if(type==="streak")return c.st.best;
+  if(type==="lv")return c.lv.lv;
+  if(type==="weeks")return weeksDone(state.records);
+  if(type==="cards")return Object.keys(state.cards.owned).length;
+  return 0;
+}
+function rwReadyIds(){
+  var c=ctx();
+  return state.rewards.filter(function(w){return !w.claimed&&rwValue(w.type,c)>=w.target}).map(function(w){return w.id});
+}
+function renderRewards(){
+  var c=ctx(),l=$("rwList");l.textContent="";
+  if(!state.rewards.length)l.appendChild(el("div","small","まだありません。自分へのごほうびを決めよう（例：10日やったらサウナ）"));
+  state.rewards.forEach(function(w){
+    var t=rwType(w.type),v=rwValue(w.type,c),ok=v>=w.target;
+    var d=el("div","rw"+(w.claimed?" done":(ok?" ok":"")));
+    var top=el("div","top"),left=el("div");
+    left.appendChild(el("b",null,w.name));
+    left.appendChild(el("div","small",t.label+" "+w.target+t.unit+" になったら（いま "+Math.min(v,999)+t.unit+"）"));
+    var btns=el("div","row");
+    if(w.claimed)btns.appendChild(el("span","small","✅ もらった"));
+    else if(ok){var g=el("button","ghost","もらった！");g.type="button";g.onclick=function(){w.claimed=true;save(state);render();confetti();praise("🎁 ごほうびをもらおう：\n"+w.name)};btns.appendChild(g)}
+    var x=el("button","ghost del","削除");x.type="button";
+    x.onclick=function(){if(confirm("このごほうびを削除しますか？")){state.rewards=state.rewards.filter(function(q){return q.id!==w.id});save(state);render()}};
+    btns.appendChild(x);
+    top.appendChild(left);top.appendChild(btns);d.appendChild(top);
+    if(!w.claimed){var bar=el("div","bar"),i=el("i");i.style.width=Math.min(100,v/w.target*100)+"%";bar.appendChild(i);d.appendChild(bar)}
+    l.appendChild(d);
+  });
+}
+function addReward(){
+  var name=$("rwName").value.trim(),n=parseInt($("rwNum").value,10),type=$("rwType").value;
+  if(!name){toast("ごほうびの名前を入れてね");return}
+  if(!(n>0)){toast("数を入れてね");return}
+  state.rewards.push({id:"w"+Date.now()+Math.floor(Math.random()*1000),name:name.slice(0,30),type:type,target:n,claimed:false});
+  $("rwName").value="";$("rwNum").value="";
+  save(state);render();toast("ごほうびを追加しました");
+}
+function renderCards(){
+  var p=packInfo();
+  $("openN").textContent="通常パックを開ける（"+p.n+"枚）";$("openN").disabled=!(p.n>0);
+  $("openR").textContent="レアパックを開ける（"+p.r+"枚）";$("openR").disabled=!(p.r>0);
+  var got=Object.keys(state.cards.owned).filter(function(id){return cardById(id)}).length;
+  $("colTitle").textContent="カード図鑑（"+got+" / "+CARDS.length+"）";
+  var g=$("cgrid");g.textContent="";
+  CARDS.forEach(function(card){
+    var o=state.cards.owned[card.id],d=el("div","ct rar"+card.r+(o?"":" lock")+(o&&o.k?" k":""));
+    if(o){
+      d.appendChild(el("em",null,card.e));d.appendChild(el("span",null,card.n));
+      if(o.n>1)d.appendChild(el("span","cnt","×"+o.n));
+      d.onclick=function(){showCard(card.id,false)};
+    }else{d.appendChild(el("em",null,"？"));d.appendChild(el("span",null,RAR[card.r]))}
+    g.appendChild(d);
+  });
+}
+
 // ---------- UI state ----------
 var sel={ex:null,min:null,minFree:false,feel:null,editId:null};
 function $(id){return document.getElementById(id)}
@@ -270,6 +465,7 @@ function onSave(){
   if(!(min>0))min=null;
   var date=$("date").value||today();
   var before=earnedIds(),wasMission=weekDays(state.records,weekStart(today()))>=3;
+  var pk0=packInfo(),rw0=rwReadyIds();
   if(sel.editId){
     var r=state.records.filter(function(x){return x.id===sel.editId})[0];
     if(r){r.exercise=ex;r.minutes=min;r.feeling=sel.feel;r.date=date}
@@ -280,6 +476,10 @@ function onSave(){
   var msg=PRAISES[Math.floor(Math.random()*PRAISES.length)];
   var after=earnedIds(),nb=after.filter(function(i){return before.indexOf(i)<0});
   if(nb.length){msg+="\n🎉 バッジ獲得："+nb.map(function(i){return BADGES.filter(function(b){return b.id===i})[0].name}).join("、")}
+  var pk1=packInfo();
+  if(pk1.n>pk0.n||pk1.r>pk0.r)msg+="\n🎁 カードパックが届いたよ！"+(pk1.r>pk0.r?"（レア！）":"");
+  var rw1=rwReadyIds().filter(function(i){return rw0.indexOf(i)<0});
+  if(rw1.length){msg+="\n🎊 ごほうび解禁："+state.rewards.filter(function(w){return rw1.indexOf(w.id)>=0}).map(function(w){return w.name}).join("、");confetti()}
   var nowMission=weekDays(state.records,weekStart(today()))>=3;
   if(nowMission&&!wasMission){msg+="\n🏁 今週のミッション達成！";confetti()}
   else if(nb.length)confetti();
@@ -318,7 +518,7 @@ function render(){
     d.appendChild(el("em",null,got?b.icon:"🔒"));d.appendChild(el("b",null,b.name));d.appendChild(el("div","small",b.t));
     bd.appendChild(d);
   });
-  renderHeat(c);renderList();
+  renderHeat(c);renderList();renderCards();renderRewards();
 }
 function renderHeat(c){
   var hh=$("heatHead");hh.textContent="";
@@ -372,7 +572,7 @@ function renderList(){
 
 // ---------- backup ----------
 function exportJSON(){
-  var blob=new Blob([JSON.stringify({app:"fitness-app",version:1,exportedAt:new Date().toISOString(),records:state.records},null,2)],{type:"application/json"});
+  var blob=new Blob([JSON.stringify({app:"fitness-app",version:1,exportedAt:new Date().toISOString(),records:state.records,cards:state.cards,rewards:state.rewards},null,2)],{type:"application/json"});
   var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="fitness-backup-"+today()+".json";
   document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},1000);
 }
@@ -388,6 +588,9 @@ function importJSON(text){
     return {id:String(r.id||"i"+Date.now()+i),date:r.date,exercise:String(r.exercise).slice(0,30),
       minutes:r.minutes>0?+r.minutes:null,feeling:r.feeling>=1&&r.feeling<=10?+r.feeling:null,note:String(r.note||"")};
   });
+  if(d.cards&&typeof d.cards==="object")state.cards=d.cards;
+  if(Array.isArray(d.rewards))state.rewards=d.rewards.filter(function(w){return w&&w.name&&w.target>0}).map(function(w){return {id:String(w.id||"w"+Date.now()),name:String(w.name).slice(0,30),type:rwType(w.type).v,target:+w.target,claimed:!!w.claimed}});
+  norm(state);
   save(state);resetForm();render();toast(rs.length+"件を読み込みました");
 }
 
@@ -396,6 +599,11 @@ if(typeof document!=="undefined"&&document.getElementById("save")){
   buildForm();resetForm();
   $("save").onclick=onSave;
   $("cancel").onclick=resetForm;
+  RW_TYPES.forEach(function(t){var o=el("option",null,t.label+"…");o.value=t.v;$("rwType").appendChild(o)});
+  $("openN").onclick=function(){openPack("n")};
+  $("openR").onclick=function(){openPack("r")};
+  $("rwAdd").onclick=addReward;
+  $("modal").onclick=function(e){if(e.target===this)closeModal()};
   $("exp").onclick=exportJSON;
   $("imp").onclick=function(){$("file").click()};
   $("file").onchange=function(){
