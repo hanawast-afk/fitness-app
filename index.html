@@ -30,7 +30,7 @@ input[type=text],input[type=number],input[type=date]{width:100%;min-height:46px;
 .big{width:100%;min-height:56px;border:0;border-radius:14px;background:var(--pri);color:var(--pri-fg);font-size:18px;font-weight:700;margin-top:12px;cursor:pointer}
 .ghost{background:none;border:1px solid var(--line);border-radius:10px;min-height:36px;padding:0 12px;cursor:pointer}
 .ghost.del{color:var(--danger)}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
 .stats b{display:block;font-size:24px}.stats span{font-size:12px;color:var(--sub)}
 .bar{height:10px;border-radius:5px;background:var(--h0);overflow:hidden;margin:6px 0}
 .bar i{display:block;height:100%;background:var(--pri);transition:width .4s}
@@ -63,12 +63,20 @@ input[type=text],input[type=number],input[type=date]{width:100%;min-height:46px;
 .bt .l.hi{color:var(--fg);font-weight:700}
 .xpf{position:fixed;left:50%;top:55%;z-index:21;font-size:30px;font-weight:800;color:var(--acc);text-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none;animation:floatup 1.6s ease-out forwards}
 @keyframes floatup{from{transform:translate(-50%,0);opacity:0}15%{opacity:1}to{transform:translate(-50%,-110px);opacity:0}}
+.hello{display:none;font-size:13px;color:var(--sub);margin:-4px 2px 10px}.hello.show{display:block}
+.opt.sm{min-height:36px;flex:1 1 40%;font-size:14px}
+.ch{width:100%;height:auto;display:block;margin-top:8px}
+.ch text{fill:var(--sub);font-size:10px;text-anchor:middle}.ch text.v{fill:var(--fg);font-weight:700}
+.ch rect.b{fill:var(--pri)}.ch rect.cur{fill:var(--acc)}.ch rect.z{fill:var(--h0)}
+.pb{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
+.pb:first-of-type{border-top:0}.pb span{color:var(--sub)}
 @media(prefers-reduced-motion:reduce){.bt,.bt.show{transition:none;transform:translate(-50%,0)}.bt.show .ck,.praise.show{animation:none}.xpf{animation:none;transform:translate(-50%,-40px)}.pc i{animation:none}.bar i{transition:none}}
 </style>
 </head>
 <body>
 <main>
 <h1>💪 筋トレ記録</h1>
+<div class="hello" id="hello"></div>
 
 <div class="card praise" id="praise" role="status"></div>
 
@@ -76,10 +84,12 @@ input[type=text],input[type=number],input[type=date]{width:100%;min-height:46px;
   <div class="stats">
     <div><b id="lv">1</b><span>レベル</span></div>
     <div><b id="streak">0</b><span>連続日数 🔥</span></div>
+    <div><b id="wstreak">0週</b><span>週連続 🗓</span></div>
     <div><b id="xp">0</b><span>XP</span></div>
   </div>
   <div class="bar"><i id="xpbar" style="width:0"></i></div>
   <div class="small" id="xpnote"></div>
+  <div class="small" id="wnote"></div>
   <div class="small" id="ticket"></div>
   <div class="small" id="care"></div>
 </div>
@@ -88,6 +98,7 @@ input[type=text],input[type=number],input[type=date]{width:100%;min-height:46px;
   <h2>今週のミッション（週3日・1回3分から）</h2>
   <div class="bar"><i id="mbar" style="width:0"></i></div>
   <div id="mtext"></div>
+  <div class="small" id="mweek"></div>
 </div>
 
 <div class="card" id="form">
@@ -103,6 +114,17 @@ input[type=text],input[type=number],input[type=date]{width:100%;min-height:46px;
   <input type="date" id="date">
   <button class="big" id="save">記録する</button>
   <button class="ghost" id="cancel" hidden style="margin-top:8px;width:100%">編集をやめる</button>
+</div>
+
+<div class="card" id="review"><h2>ふりかえり（直近8週）</h2>
+  <div class="row" id="rvTog"></div>
+  <div id="rvChart"></div>
+  <div id="rvCmp" style="margin-top:6px"></div>
+  <h2 style="margin-top:14px">種目ごとの自己ベスト（1回の最長）</h2>
+  <div id="rvPB"></div>
+  <h2 style="margin-top:14px">きつさの週平均</h2>
+  <div class="small" id="rvFeel"></div>
+  <div class="small" id="rvCare"></div>
 </div>
 
 <div class="card"><h2>バッジ</h2><div class="badges" id="badges"></div></div>
@@ -213,6 +235,68 @@ function maxWeekDays(records){
   var ws={};records.forEach(function(r){ws[weekStart(r.date)]=1});
   var m=0;Object.keys(ws).forEach(function(w){m=Math.max(m,weekDays(records,w))});return m;
 }
+function countWeek(ds,ws){var n=0;for(var i=0;i<7;i++)if(ds[addDays(ws,i)])n++;return n}
+// weekly streak: Mon-Sun weeks with >=3 active days. Last week's streak is kept while this week is pending.
+function weekStreak(records,todayStr){
+  var ds=daysSet(records),dates=Object.keys(ds).sort(),cw=weekStart(todayStr);
+  var res={current:0,best:0,thisDays:countWeek(ds,cw),thisHit:false,need:0};
+  res.thisHit=res.thisDays>=3;res.need=Math.max(0,3-res.thisDays);
+  if(!dates.length)return res;
+  var w=weekStart(dates[0]),run=0,best=0;
+  while(w<cw){
+    if(countWeek(ds,w)>=3){run++;if(run>best)best=run}else run=0;
+    w=addDays(w,7);
+  }
+  if(res.thisHit){run++;if(run>best)best=run}
+  res.current=run;res.best=best;
+  return res;
+}
+function daysBetween(a,b){return Math.round((parse(b)-parse(a))/86400000)}
+function totals(records){
+  var m=0;records.forEach(function(r){m+=r.minutes>0?r.minutes:0});
+  return {days:Object.keys(daysSet(records)).length,minutes:m};
+}
+// latest record date strictly before dateStr -> {prev,gap}; gap = calendar days since then
+function lastBefore(records,dateStr){
+  var p=null;records.forEach(function(r){if(r.date<dateStr&&(!p||r.date>p))p=r.date});
+  return p?{prev:p,gap:daysBetween(p,dateStr)}:null;
+}
+// on app open: true if nothing recorded today and the last record is 3+ days back
+function showWelcomeHint(records,todayStr){
+  if(records.some(function(r){return r.date===todayStr}))return false;
+  var lb=lastBefore(records,todayStr);
+  return !!lb&&lb.gap>=3;
+}
+// last n Mon-Sun weeks (oldest first): days, minutes, avg feeling (null if none)
+function weeklyTotals(records,todayStr,n){
+  var cw=weekStart(todayStr),map={},out=[];
+  records.forEach(function(r){
+    var w=weekStart(r.date),o=map[w]||(map[w]={d:{},m:0,fs:0,fn:0});
+    o.d[r.date]=1;o.m+=r.minutes>0?r.minutes:0;
+    if(r.feeling>0){o.fs+=r.feeling;o.fn++}
+  });
+  for(var i=n-1;i>=0;i--){
+    var ws=addDays(cw,-7*i),o=map[ws];
+    out.push({ws:ws,days:o?Object.keys(o.d).length:0,minutes:o?o.m:0,feel:o&&o.fn?o.fs/o.fn:null});
+  }
+  return out;
+}
+// best single-session minutes per exercise (earliest date that reached it)
+function personalBests(records){
+  var sorted=records.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0}),map={},order=[];
+  sorted.forEach(function(r){
+    if(!(r.minutes>0))return;
+    if(!map[r.exercise]){map[r.exercise]={exercise:r.exercise,minutes:r.minutes,date:r.date};order.push(r.exercise)}
+    else if(r.minutes>map[r.exercise].minutes){map[r.exercise].minutes=r.minutes;map[r.exercise].date=r.date}
+  });
+  var names=EXERCISES.filter(function(e){return map[e]}).concat(order.filter(function(e){return EXERCISES.indexOf(e)<0}));
+  return names.map(function(e){return map[e]});
+}
+// two consecutive weeks (this/last, or last/2 weeks ago) with avg feeling >=7
+function highEffortWeeks(wt){
+  var n=wt.length;function hi(i){return wt[i].feel!==null&&wt[i].feel>=7}
+  return n>=3&&((hi(n-1)&&hi(n-2))||(hi(n-2)&&hi(n-3)));
+}
 var BADGES=[
  {id:"first",icon:"🌱",name:"初記録",t:"はじめの一歩",f:function(c){return c.records.length>=1}},
  {id:"s3",icon:"🔥",name:"3日連続",t:"連続日数3",f:function(c){return c.st.best>=3}},
@@ -298,6 +382,7 @@ function onSave(){
   var before=earnedIds(),wasMission=weekDays(state.records,weekStart(date))>=3;
   var lvBefore=levelInfo(computeXP(state.records)).lv,maxBefore=maxWeekDays(state.records);
   var firstToday=!state.records.some(function(x){return x.date===date});
+  var lb=(firstToday&&date===today())?lastBefore(state.records,date):null,isBack=!!lb&&lb.gap>=3;
   var prevBest=0,hadPrev=false;
   state.records.forEach(function(x){if(x.exercise===ex&&x.minutes>0){hadPrev=true;prevBest=Math.max(prevBest,x.minutes)}});
   var rec={id:"r"+Date.now()+Math.floor(Math.random()*1000),date:date,exercise:ex,minutes:min,feeling:sel.feel,note:""};
@@ -309,19 +394,31 @@ function onSave(){
   var nWeek=state.records.filter(function(x){return weekStart(x.date)===ws}).length;
   var nMonth=state.records.filter(function(x){return x.date.slice(0,7)===mo}).length;
   var lines=[{t:"今週 "+nWeek+" 回目・今月 "+nMonth+" 回目"}];
+  var backMsg="";
+  if(isBack){
+    var tt=totals(state.records),stNow=computeStreak(state.records,date);
+    backMsg="👋 おかえり！記録は消えていません。累計 "+tt.days+"日・"+tt.minutes+"分";
+    lines.unshift({t:backMsg,hi:1});
+    if(stNow.current===1){
+      var rs="🌱 新しい連続のスタート。これまでの自己最長 "+stNow.best+"日・累計 "+tt.days+"日・"+tt.minutes+"分";
+      lines.splice(1,0,{t:rs,hi:1});backMsg+="\n"+rs;
+    }
+  }
   var xpl="+"+gain+" XP"+(firstToday?"（今日の最初の記録ボーナス +30 込み）":"");
   lines.push({t:xpl,hi:1});
-  var big=firstToday;
+  var big=firstToday||isBack;
   if(min&&hadPrev&&min>prevBest){lines.push({t:"🏆 自己ベスト更新！（"+ex+" "+min+"分）",hi:1});big=true}
   if(maxWeekDays(state.records)>maxBefore&&maxBefore>0){lines.push({t:"📈 週の最多記録！（"+maxWeekDays(state.records)+"日）",hi:1});big=true}
   if(lvAfter>lvBefore){lines.push({t:"⬆️ レベルアップ！ Lv"+lvAfter,hi:1});big=true}
   var nb=earnedIds().filter(function(i){return before.indexOf(i)<0});
   if(nb.length){lines.push({t:"🎉 バッジ獲得："+nb.map(function(i){return BADGES.filter(function(b){return b.id===i})[0].name}).join("、"),hi:1});big=true}
   var mission=weekDays(state.records,ws)>=3&&!wasMission;
-  if(mission){lines.push({t:"🏁 今週の週3日ミッション達成！やったね！",hi:1});big=true}
+  if(mission){lines.push({t:"🏁 今週の週3日ミッション達成！やったね！",hi:1});big=true;
+    lines.push({t:"🗓 週連続 "+weekStreak(state.records,today()).current+"週",hi:1})}
   var msg=PRAISES[Math.floor(Math.random()*PRAISES.length)];
   if(nb.length)msg+="\n🎉 バッジ獲得："+nb.map(function(i){return BADGES.filter(function(b){return b.id===i})[0].name}).join("、");
   if(mission)msg+="\n🏁 今週のミッション達成！";
+  if(backMsg)msg=backMsg+"\n"+msg;
   confetti(big?120:30);
   showBT("✓ "+ex+" "+recMinStr(rec)+" きつさ"+(rec.feeling||"不明")+" を記録",lines);
   floatXP("+"+gain+" XP");
@@ -360,6 +457,11 @@ function confetti(n){
 function render(){
   var c=ctx(),xp=computeXP(state.records);
   $("lv").textContent=c.lv.lv;$("xp").textContent=xp;$("streak").textContent=c.st.current;
+  var ws3=weekStreak(state.records,today());
+  $("wstreak").textContent=ws3.current+"週";
+  $("wnote").textContent=ws3.thisHit?"🗓 今週も週3日を達成ずみ 🎉":"🗓 あと"+ws3.need+"日で"+(ws3.current>0?"今週も達成（週連続 "+ws3.current+"週をキープ中）":"今週の週3日達成");
+  var hello=$("hello"),hint=showWelcomeHint(state.records,today());
+  hello.textContent=hint?"おかえりなさい 🌿 1分だけでもOK。記録はそのまま残っています。":"";hello.classList.toggle("show",hint);
   $("xpbar").style.width=Math.round(c.lv.cur/c.lv.need*100)+"%";
   $("xpnote").textContent="次のレベルまであと "+(c.lv.need-c.lv.cur)+" XP（記録すれば必ずXP。その日の最初の記録はボーナス）";
   $("ticket").textContent=c.st.ticketUsedThisWeek?"🎫 おやすみチケット：今週は使用済み（休むのもOK）":"🎫 おやすみチケット：今週あり（1日休んでも連続が切れません）";
@@ -369,6 +471,8 @@ function render(){
   var wd=weekDays(state.records,weekStart(today()));
   $("mbar").style.width=Math.min(100,wd/3*100)+"%";
   $("mtext").textContent=wd>=3?"🎉 達成！ 今週 "+wd+"日 やりました":"今週 "+wd+" / 3 日（あと"+(3-wd)+"日）";
+  $("mweek").textContent="🗓 週連続 "+ws3.current+"週（自己最長 "+ws3.best+"週）";
+  renderReview();
   // badges
   var bd=$("badges");bd.textContent="";
   BADGES.forEach(function(b){
@@ -398,6 +502,49 @@ function renderHeat(c){
     h.appendChild(el("div",null,weekDays(state.records,ws)+"日"));
     ws=addDays(ws,7);
   }
+}
+var rvMode="min";
+function svgEl(tag,attrs){
+  var e=document.createElementNS("http://www.w3.org/2000/svg",tag);
+  for(var k in attrs)e.setAttribute(k,attrs[k]);return e;
+}
+function md(s){var d=parse(s);return (d.getMonth()+1)+"/"+d.getDate()}
+function renderReview(){
+  var wt=weeklyTotals(state.records,today(),8);
+  var tog=$("rvTog");tog.textContent="";
+  [["min","合計分"],["days","実施日数"]].forEach(function(o){
+    var b=el("button","opt sm"+(rvMode===o[0]?" on":""),o[1]);b.type="button";
+    b.onclick=function(){rvMode=o[0];renderReview()};tog.appendChild(b);
+  });
+  var key=rvMode==="min"?"minutes":"days",unit=rvMode==="min"?"分":"日",ukey=rvMode==="min"?"days":"minutes",uunit=rvMode==="min"?"日":"分";
+  var max=1;wt.forEach(function(w){if(w[key]>max)max=w[key]});
+  var svg=svgEl("svg",{"class":"ch",viewBox:"0 0 320 140",role:"img"});
+  svg.setAttribute("aria-label","直近8週の"+(rvMode==="min"?"合計分":"実施日数")+"："+wt.map(function(w){return md(w.ws)+"の週 "+w[key]+unit}).join("、"));
+  wt.forEach(function(w,i){
+    var x=i*40+6,h=Math.round(w[key]/max*72),y=104-h,cur=i===wt.length-1;
+    svg.appendChild(svgEl("rect",{"class":w[key]?(cur?"cur":"b"):"z",x:x,y:w[key]?y:102,width:28,height:w[key]?h:2,rx:4}));
+    var v=svgEl("text",{"class":"v",x:x+14,y:(w[key]?y:102)-4});v.textContent=w[key];svg.appendChild(v);
+    var l=svgEl("text",{x:x+14,y:118});l.textContent=md(w.ws);svg.appendChild(l);
+    var l2=svgEl("text",{x:x+14,y:132});l2.textContent=w[ukey]+uunit;svg.appendChild(l2);
+  });
+  var ch=$("rvChart");ch.textContent="";ch.appendChild(svg);
+  ch.appendChild(el("div","small","週は月〜日。棒＝"+(rvMode==="min"?"合計分":"実施日数")+"、下段＝"+(rvMode==="min"?"実施日数":"合計分")+"、黄色＝今週"));
+  var tw=wt[7],lw=wt[6],diff=tw.minutes-lw.minutes,t;
+  if(!state.records.length)t="記録するとここに今週の分数が出ます。";
+  else if(tw.minutes===0&&tw.days===0)t="今週はこれから。先週は "+lw.minutes+"分（"+lw.days+"日）。1分だけでもOK。";
+  else if(lw.minutes===0&&lw.days===0)t="今週 "+tw.minutes+"分（"+tw.days+"日）。先週は記録なし。";
+  else if(diff>0)t="今週 "+tw.minutes+"分（"+tw.days+"日）。先週より +"+diff+"分";
+  else if(diff===0)t="今週 "+tw.minutes+"分（"+tw.days+"日）。先週と同じ分数";
+  else t="今週 "+tw.minutes+"分（"+tw.days+"日）。先週は先週、今週は今週。自分のペースでOK 🌱";
+  $("rvCmp").textContent=t;
+  var pbs=personalBests(state.records),pb=$("rvPB");pb.textContent="";
+  if(!pbs.length)pb.appendChild(el("div","small","分数つきの記録がたまると、ここに自己ベストが出ます。"));
+  pbs.forEach(function(p){
+    var r=el("div","pb");r.appendChild(el("b",null,p.exercise));r.appendChild(el("span",null,"最長 "+p.minutes+"分（"+md(p.date)+"）"));pb.appendChild(r);
+  });
+  var names=["3週前","2週前","先週","今週"];
+  $("rvFeel").textContent=wt.slice(4).map(function(w,i){return names[i]+" "+(w.feel===null?"—":w.feel.toFixed(1))}).join(" → ");
+  $("rvCare").textContent=highEffortWeeks(wt)?"きつさが高めの週が続いています。軽めの日もOKです 🍃":"";
 }
 var JP=["日","月","火","水","木","金","土"];
 function renderList(){
